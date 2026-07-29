@@ -1415,6 +1415,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "tsupply"
+                      },
+                      "val": {
+                        "u64": "442"
+                      }
+                    },
+                    {
+                      "key": {
                         "vec": [
                           {
                             "symbol": "balance"

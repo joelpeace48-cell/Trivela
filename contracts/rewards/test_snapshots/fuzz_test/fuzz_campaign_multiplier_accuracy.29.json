@@ -20,10 +20,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "u64": "9"
+                  "u64": "3"
                 },
                 {
-                  "u32": 46142
+                  "u32": 31331
                 }
               ]
             }
@@ -49,10 +49,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "u64": "9"
+                  "u64": "3"
                 },
                 {
-                  "u64": "7547"
+                  "u64": "7429"
                 }
               ]
             }
@@ -145,6 +145,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "tsupply"
+                      },
+                      "val": {
+                        "u64": "23275"
+                      }
+                    },
+                    {
+                      "key": {
                         "vec": [
                           {
                             "symbol": "balance"
@@ -155,7 +163,7 @@
                         ]
                       },
                       "val": {
-                        "u64": "34823"
+                        "u64": "23275"
                       }
                     },
                     {
@@ -165,12 +173,12 @@
                             "symbol": "mult"
                           },
                           {
-                            "u64": "9"
+                            "u64": "3"
                           }
                         ]
                       },
                       "val": {
-                        "u32": 46142
+                        "u32": 31331
                       }
                     }
                   ]

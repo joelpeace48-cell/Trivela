@@ -116,6 +116,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "tsupply"
+                      },
+                      "val": {
+                        "u64": "18388669024427769478"
+                      }
+                    },
+                    {
+                      "key": {
                         "vec": [
                           {
                             "symbol": "balance"

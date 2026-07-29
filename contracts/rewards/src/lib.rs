@@ -44,11 +44,19 @@ use soroban_sdk::{
     Bytes, BytesN, Env, Symbol, Vec,
 };
 
-mod poseidon;
+// Poseidon-hash Merkle experiment (issue #931): depends on ark_bn254 and
+// light_poseidon, neither of which is declared in Cargo.toml — this has
+// never compiled since the commit that introduced it, and nothing in the
+// contract's public API calls into it (only its own tests/benchmark do).
+// Gated behind an off-by-default feature so the crate builds; flip it on
+// once the crypto deps are actually vetted and wired up.
+#[cfg(feature = "poseidon-experimental")]
 mod merkle;
-#[cfg(test)]
+#[cfg(feature = "poseidon-experimental")]
+mod poseidon;
+#[cfg(all(test, feature = "poseidon-experimental"))]
 mod poseidon_merkle_tests;
-#[cfg(test)]
+#[cfg(all(test, feature = "poseidon-experimental"))]
 mod poseidon_vs_sha256_bench;
 
 #[contracterror]
@@ -82,6 +90,35 @@ pub enum Error {
     InvalidReferralConfig = 19,
     /// The computed referral bonus rounded down to zero.
     ZeroReferralBonus = 20,
+    // ── Multi-sig errors (issue #733) ─────────────────────────────────────────
+    // Numbered 36+ rather than 21+: the SEP-41 block below already published
+    // 21-29 through generated bindings and docs/CONTRACTS_API.md (see the
+    // ZeroAmount/SelfTransfer comment further down for the same reasoning),
+    // and 30/31 are taken by the clawback block. These codes aren't published
+    // anywhere yet, so they're free to number without a collision.
+    /// Multi-sig configuration has not been initialised.
+    MultiSigNotConfigured = 36,
+    /// Threshold must be >= 1 and <= len(signers).
+    InvalidThreshold = 37,
+    /// The caller is not in the authorised signer set.
+    NotASigner = 38,
+    /// This signer has already approved this proposal.
+    AlreadyApproved = 39,
+    /// The referenced proposal does not exist.
+    ProposalNotFound = 40,
+    /// The proposal has passed its expiry ledger.
+    ProposalExpired = 41,
+    /// The proposal does not yet have enough approvals to execute.
+    InsufficientApprovals = 42,
+    // ── Governance errors (issue #735) ────────────────────────────────────────
+    /// Governance quorum or delay has not been configured.
+    GovernanceNotConfigured = 43,
+    /// A governance proposal for this key is already pending.
+    ProposalAlreadyPending = 44,
+    /// The time-lock delay has not yet elapsed.
+    TimeLockActive = 45,
+    /// The governance proposal has been cancelled or never existed.
+    ProposalCancelled = 46,
     /// SEP-41 token mode is not enabled.
     TokenModeNotEnabled = 21,
     /// SEP-41: allowance not sufficient for transfer_from.
@@ -90,11 +127,16 @@ pub enum Error {
     ApprovalExpired = 23,
     /// SEP-41: invalid expiration ledger (must be > current ledger).
     InvalidExpiration = 24,
-    InvalidThreshold = 25,
-    InsufficientSignatures = 26,
-    NonceReused = 27,
-    DuplicateSigner = 28,
-    UnknownSigner = 29,
+    // Numbered 47+ rather than 25+: these aren't SEP-41 codes (see
+    // MultiSigNotConfigured above) — not published/documented anywhere,
+    // so free to renumber. Left contiguous with the governance-multisig
+    // block above rather than reusing 21-29, which the ZeroAmount/
+    // SelfTransfer comment below already treats as reserved to SEP-41.
+    SimpleMultisigInvalidThreshold = 47,
+    InsufficientSignatures = 48,
+    NonceReused = 49,
+    DuplicateSigner = 50,
+    UnknownSigner = 51,
     /// Operation amount must be greater than zero (issue #1020).
     ///
     /// Assigned 30/31 rather than 21/22: the SEP-41 block already published
@@ -103,6 +145,14 @@ pub enum Error {
     ZeroAmount = 30,
     /// Transfer source and destination cannot be the same address (issue #1020).
     SelfTransfer = 31,
+    /// No clawback proposal found for the given id.
+    ClawbackNotFound = 32,
+    /// The timelock delay for this clawback has not yet elapsed.
+    ClawbackTimelocked = 33,
+    /// Clawback amount exceeds the target's current unclaimed balance.
+    ClawbackOverspend = 34,
+    /// Only the configured guardian (admin) may cancel a clawback proposal.
+    ClawbackGuardianOnly = 35,
 }
 
 /// Vesting schedule record stored per user per vest_id.
@@ -113,6 +163,58 @@ pub struct VestingRecord {
     pub start_ledger: u32,
     pub end_ledger: u32,
     pub claimed: u64,
+}
+
+// ── Multi-sig types (issue #733) ─────────────────────────────────────────────
+
+/// Multi-sig configuration: M-of-N threshold over a signer set.
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct MultiSigConfig {
+    /// Minimum number of approvals required to execute a privileged operation.
+    pub threshold: u32,
+    /// Ordered list of authorized signers.
+    pub signers: Vec<Address>,
+}
+
+/// An in-flight privileged operation proposal waiting for threshold approvals.
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct PrivilegedProposal {
+    /// Unique proposal identifier.
+    pub proposal_id: u64,
+    /// Symbolic op code (e.g. `withdraw_reserve`, `upgrade`, `set_rate`).
+    pub op: Symbol,
+    /// Serialised op arguments (application-defined payload).
+    pub payload: Vec<Symbol>,
+    /// Ledger after which this proposal expires.
+    pub expires_at_ledger: u32,
+    /// Set of signers that have approved so far.
+    pub approvals: Vec<Address>,
+}
+
+// ── Governance types (issue #735) ─────────────────────────────────────────────
+
+/// An in-flight on-chain governance proposal for a single parameter change.
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct ParamProposal {
+    /// Unique proposal identifier.
+    pub proposal_id: u64,
+    /// Storage key for the parameter being changed.
+    pub param_key: Symbol,
+    /// New value encoded as a 64-bit word (caller's encoding convention).
+    pub new_value: u64,
+    /// Ledger at or after which the proposal may be executed.
+    pub execute_after_ledger: u32,
+    /// Ledger after which the proposal expires without execution.
+    pub expires_at_ledger: u32,
+    /// Set of addresses that voted in favour.
+    pub votes_for: Vec<Address>,
+    /// Quorum required for execution (number of approving votes).
+    pub quorum: u32,
+    /// Whether the proposal has been executed.
+    pub executed: bool,
 }
 
 contractmeta!(
@@ -241,6 +343,21 @@ const REF_BONUS_EVENT: Symbol = symbol_short!("refbonus");
 // configuration and keep `qualifying_amount * rate_bps` comfortably in range.
 const MAX_REFERRAL_RATE_BPS: u32 = 100_000;
 
+// ── Multi-sig constants (issue #733) ─────────────────────────────────────────
+const MULTISIG_CFG: Symbol = symbol_short!("mscfg");
+const MULTISIG_PROP: Symbol = symbol_short!("msprop");
+const MULTISIG_CTR: Symbol = symbol_short!("msctr");
+const PRIV_PROP_EVENT: Symbol = symbol_short!("privprop");
+const PRIV_APPR_EVENT: Symbol = symbol_short!("privappr");
+const PRIV_EXEC_EVENT: Symbol = symbol_short!("privexec");
+
+// ── Governance constants (issue #735) ─────────────────────────────────────────
+const GOV_PROP: Symbol = symbol_short!("govprop");
+const GOV_CTR: Symbol = symbol_short!("govctr");
+const GOV_PROPOSE_EVENT: Symbol = symbol_short!("govprp");
+const GOV_VOTE_EVENT: Symbol = symbol_short!("govvote");
+const GOV_EXECUTE_EVENT: Symbol = symbol_short!("govexec");
+const GOV_CANCEL_EVENT: Symbol = symbol_short!("govcanc");
 // ── SEP-41 Token Interface (issue #530) ─────────────────────────────────────
 // Optional token-backed mode where reward points are SEP-41-compliant tokens.
 // When token_mode is enabled, the contract exposes standard token functions.
@@ -254,6 +371,41 @@ const ALLOWANCE: Symbol = symbol_short!("allow");
 const SEP41_TRANSFER_EVENT: Symbol = symbol_short!("transfer");
 const SEP41_APPROVE_EVENT: Symbol = symbol_short!("approve");
 const SEP41_BURN_EVENT: Symbol = symbol_short!("burn");
+
+// ── Timelocked clawback (issue #729) ─────────────────────────────────────────
+//
+// A clawback proposal reserves `amount` from a target's unclaimed balance
+// and queues an admin-initiated credit removal. The guardian (admin) may
+// cancel within the timelock window. After the delay elapses, anyone can
+// execute. Only unclaimed points may be clawed back (issued but not yet
+// redeemed), so the credit→balance ledger conservation invariant holds.
+//
+// Storage layout:
+//   (CLAWBACK_PROPOSAL, u32) -> ClawbackProposal  (persistent)
+//   CLAWBACK_NONCE            -> u32               (instance — monotonic counter)
+
+const CLAWBACK_PROPOSAL: Symbol = symbol_short!("clwbprop");
+const CLAWBACK_NONCE: Symbol = symbol_short!("clwbnonce");
+/// Minimum ledgers that must pass before a clawback can be executed.
+/// At ~5 s/ledger this is roughly 7 days on mainnet.
+const CLAWBACK_TIMELOCK_LEDGERS: u32 = 120_960;
+const CLAWBACK_PROPOSE_EVENT: Symbol = symbol_short!("clwbprop");
+const CLAWBACK_CANCEL_EVENT: Symbol = symbol_short!("clwbcanc");
+const CLAWBACK_EXECUTE_EVENT: Symbol = symbol_short!("clwbexec");
+
+/// Proposal record stored under `(CLAWBACK_PROPOSAL, id)`.
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct ClawbackProposal {
+    pub target: Address,
+    pub amount: u64,
+    /// Ledger sequence number when the proposal was created.
+    pub proposed_at: u32,
+    /// True once cancelled so stale proposals don't appear as pending.
+    pub cancelled: bool,
+    /// True once executed so replay is impossible.
+    pub executed: bool,
+}
 
 #[contract]
 pub struct RewardsContract;
@@ -1529,6 +1681,43 @@ impl RewardsContract {
         env.storage().instance().get(&(REF_PAID, referee))
     }
 
+    // ── Multi-sig admin (issue #733) ──────────────────────────────────────────
+    //
+    // Privileged operations (upgrade, withdraw_reserve, rate/fee changes) are
+    // gated behind an M-of-N signer set. The flow is:
+    //   1. Any signer calls `propose_privileged_op` → a `PrivilegedProposal` is
+    //      stored and a `priv_prop` event is emitted.
+    //   2. Each remaining signer calls `approve_privileged_op` → adds their
+    //      address to `approvals`; emits `priv_appr`.
+    //   3. Once `approvals.len() >= threshold`, any signer calls
+    //      `execute_privileged_op` to run the action; emits `priv_exec`.
+    //
+    // Signer rotation: the multi-sig config itself is updated via a privileged
+    // proposal so rotation inherits the same threshold requirement.
+
+    /// Initialise the M-of-N signer set (current admin only). Once configured,
+    /// all privileged ops on this contract flow through the multi-sig gate.
+    ///
+    /// `threshold` must be in `1..=signers.len()`.
+    pub fn init_multisig(
+        env: Env,
+        admin: Address,
+        signers: Vec<Address>,
+        threshold: u32,
+    ) -> Result<(), Error> {
+        require_admin(&env, &admin)?;
+        let n = signers.len();
+        if threshold == 0 || threshold > n {
+            return Err(Error::InvalidThreshold);
+        }
+        let cfg = MultiSigConfig { threshold, signers };
+        env.storage().instance().set(&MULTISIG_CFG, &cfg);
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        Ok(())
+    }
+
     // ── SEP-41 Token Interface (issue #530) ──────────────────────────────────
 
     /// Enable token mode (admin only). One-way: once enabled, cannot be disabled.
@@ -1548,6 +1737,310 @@ impl RewardsContract {
         env.storage().instance().set(&TOKEN_NAME, &name);
         env.storage().instance().set(&TOKEN_SYMBOL, &symbol);
         env.storage().instance().set(&TOKEN_DECIMALS, &decimals);
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        Ok(())
+    }
+
+    /// Return the current multi-sig configuration, if any.
+    pub fn multisig_config(env: Env) -> Option<MultiSigConfig> {
+        env.storage().instance().get(&MULTISIG_CFG)
+    }
+
+    /// Propose a privileged operation. The caller must be in the signer set.
+    ///
+    /// Returns the new `proposal_id`.
+    pub fn propose_privileged_op(
+        env: Env,
+        proposer: Address,
+        op: Symbol,
+        payload: Vec<Symbol>,
+        ttl_ledgers: u32,
+    ) -> Result<u64, Error> {
+        proposer.require_auth();
+        let cfg: MultiSigConfig = env
+            .storage()
+            .instance()
+            .get(&MULTISIG_CFG)
+            .ok_or(Error::MultiSigNotConfigured)?;
+
+        if !cfg.signers.contains(&proposer) {
+            return Err(Error::NotASigner);
+        }
+
+        let id: u64 = env.storage().instance().get(&MULTISIG_CTR).unwrap_or(0u64) + 1;
+        env.storage().instance().set(&MULTISIG_CTR, &id);
+
+        let mut approvals = Vec::new(&env);
+        approvals.push_back(proposer.clone());
+
+        let proposal = PrivilegedProposal {
+            proposal_id: id,
+            op: op.clone(),
+            payload,
+            expires_at_ledger: env.ledger().sequence().saturating_add(ttl_ledgers),
+            approvals,
+        };
+        env.storage()
+            .instance()
+            .set(&(MULTISIG_PROP, id), &proposal);
+        env.events().publish((PRIV_PROP_EVENT, proposer), (id, op));
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        Ok(id)
+    }
+
+    /// Approve an in-flight privileged proposal. The caller must be a signer
+    /// and must not have already approved this proposal.
+    pub fn approve_privileged_op(
+        env: Env,
+        signer: Address,
+        proposal_id: u64,
+    ) -> Result<u32, Error> {
+        signer.require_auth();
+        let cfg: MultiSigConfig = env
+            .storage()
+            .instance()
+            .get(&MULTISIG_CFG)
+            .ok_or(Error::MultiSigNotConfigured)?;
+
+        if !cfg.signers.contains(&signer) {
+            return Err(Error::NotASigner);
+        }
+
+        let mut proposal: PrivilegedProposal = env
+            .storage()
+            .instance()
+            .get(&(MULTISIG_PROP, proposal_id))
+            .ok_or(Error::ProposalNotFound)?;
+
+        if env.ledger().sequence() > proposal.expires_at_ledger {
+            return Err(Error::ProposalExpired);
+        }
+        if proposal.approvals.contains(&signer) {
+            return Err(Error::AlreadyApproved);
+        }
+
+        proposal.approvals.push_back(signer.clone());
+        let approval_count = proposal.approvals.len();
+        env.storage()
+            .instance()
+            .set(&(MULTISIG_PROP, proposal_id), &proposal);
+        env.events()
+            .publish((PRIV_APPR_EVENT, signer), (proposal_id, approval_count));
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        Ok(approval_count)
+    }
+
+    /// Execute a privileged proposal once it has reached threshold approvals.
+    /// Returns the number of approvals at execution time.
+    ///
+    /// The caller must be a signer. The actual effect (pause, rate change, etc.)
+    /// is dispatched by the caller after this returns — the contract records the
+    /// execution and clears the proposal from storage.
+    pub fn execute_privileged_op(
+        env: Env,
+        executor: Address,
+        proposal_id: u64,
+    ) -> Result<u32, Error> {
+        executor.require_auth();
+        let cfg: MultiSigConfig = env
+            .storage()
+            .instance()
+            .get(&MULTISIG_CFG)
+            .ok_or(Error::MultiSigNotConfigured)?;
+
+        if !cfg.signers.contains(&executor) {
+            return Err(Error::NotASigner);
+        }
+
+        let proposal: PrivilegedProposal = env
+            .storage()
+            .instance()
+            .get(&(MULTISIG_PROP, proposal_id))
+            .ok_or(Error::ProposalNotFound)?;
+
+        if env.ledger().sequence() > proposal.expires_at_ledger {
+            return Err(Error::ProposalExpired);
+        }
+
+        let approval_count = proposal.approvals.len();
+        if approval_count < cfg.threshold {
+            return Err(Error::InsufficientApprovals);
+        }
+
+        env.storage()
+            .instance()
+            .remove(&(MULTISIG_PROP, proposal_id));
+        env.events()
+            .publish((PRIV_EXEC_EVENT, executor), (proposal_id, approval_count));
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        Ok(approval_count)
+    }
+
+    // ── On-chain governance for parameter changes (issue #735) ────────────────
+    //
+    // Sensitive economic parameters flow through a time-locked governance
+    // process instead of being applied immediately by admin:
+    //
+    //   1. Any authorised voter calls `propose_param_change(key, value, quorum, delay_ledgers)`.
+    //   2. Voters call `vote_param_change(proposal_id)` to accumulate approval.
+    //   3. After the time-lock elapses AND quorum is met, admin calls
+    //      `execute_param_change(proposal_id)` to apply the change.
+    //   4. Admin may call `cancel_param_change(proposal_id)` to veto at any time.
+    //
+    // This module stores proposals in instance storage keyed by `(GOV_PROP, id)`.
+    // A single `GOV_CTR` tracks the next proposal id.
+
+    /// Propose a governance change for parameter `param_key`.
+    ///
+    /// `new_value` is the proposed replacement value. `quorum` is the number
+    /// of approving votes required. `delay_ledgers` is the minimum number of
+    /// ledgers that must elapse before the proposal may be executed. Returns
+    /// the new `proposal_id`.
+    pub fn propose_param_change(
+        env: Env,
+        proposer: Address,
+        param_key: Symbol,
+        new_value: u64,
+        quorum: u32,
+        delay_ledgers: u32,
+        ttl_ledgers: u32,
+    ) -> Result<u64, Error> {
+        proposer.require_auth();
+        if quorum == 0 {
+            return Err(Error::GovernanceNotConfigured);
+        }
+
+        let id: u64 = env.storage().instance().get(&GOV_CTR).unwrap_or(0u64) + 1;
+        env.storage().instance().set(&GOV_CTR, &id);
+
+        let now = env.ledger().sequence();
+        let proposal = ParamProposal {
+            proposal_id: id,
+            param_key: param_key.clone(),
+            new_value,
+            execute_after_ledger: now.saturating_add(delay_ledgers),
+            expires_at_ledger: now.saturating_add(ttl_ledgers),
+            votes_for: Vec::new(&env),
+            quorum,
+            executed: false,
+        };
+        env.storage().instance().set(&(GOV_PROP, id), &proposal);
+        env.events()
+            .publish((GOV_PROPOSE_EVENT, proposer), (id, param_key, new_value));
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        Ok(id)
+    }
+
+    /// Cast a vote in favour of a governance proposal.
+    ///
+    /// The voter must authenticate. Returns the current vote count.
+    pub fn vote_param_change(env: Env, voter: Address, proposal_id: u64) -> Result<u32, Error> {
+        voter.require_auth();
+
+        let mut proposal: ParamProposal = env
+            .storage()
+            .instance()
+            .get(&(GOV_PROP, proposal_id))
+            .ok_or(Error::ProposalNotFound)?;
+
+        if env.ledger().sequence() > proposal.expires_at_ledger {
+            return Err(Error::ProposalExpired);
+        }
+        if proposal.executed {
+            return Err(Error::ProposalNotFound);
+        }
+        if proposal.votes_for.contains(&voter) {
+            return Err(Error::AlreadyApproved);
+        }
+
+        proposal.votes_for.push_back(voter.clone());
+        let vote_count = proposal.votes_for.len();
+        env.storage()
+            .instance()
+            .set(&(GOV_PROP, proposal_id), &proposal);
+        env.events()
+            .publish((GOV_VOTE_EVENT, voter), (proposal_id, vote_count));
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        Ok(vote_count)
+    }
+
+    /// Execute a governance proposal. Admin only. Requires:
+    /// - quorum votes collected
+    /// - time-lock delay elapsed
+    /// - proposal not expired or already executed
+    ///
+    /// The method records the execution and returns the parameter key and value
+    /// so the caller can apply the change to the correct storage entry.
+    pub fn execute_param_change(
+        env: Env,
+        admin: Address,
+        proposal_id: u64,
+    ) -> Result<(Symbol, u64), Error> {
+        require_admin(&env, &admin)?;
+
+        let mut proposal: ParamProposal = env
+            .storage()
+            .instance()
+            .get(&(GOV_PROP, proposal_id))
+            .ok_or(Error::ProposalNotFound)?;
+
+        let now = env.ledger().sequence();
+        if now > proposal.expires_at_ledger {
+            return Err(Error::ProposalExpired);
+        }
+        if proposal.executed {
+            return Err(Error::ProposalNotFound);
+        }
+        if now < proposal.execute_after_ledger {
+            return Err(Error::TimeLockActive);
+        }
+        if proposal.votes_for.len() < proposal.quorum {
+            return Err(Error::InsufficientApprovals);
+        }
+
+        proposal.executed = true;
+        env.storage()
+            .instance()
+            .set(&(GOV_PROP, proposal_id), &proposal);
+        env.events().publish(
+            (GOV_EXECUTE_EVENT, admin),
+            (proposal_id, proposal.param_key.clone(), proposal.new_value),
+        );
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        Ok((proposal.param_key, proposal.new_value))
+    }
+
+    /// Cancel a governance proposal (admin only). Removes the proposal from
+    /// storage so it can never be executed.
+    pub fn cancel_param_change(env: Env, admin: Address, proposal_id: u64) -> Result<(), Error> {
+        require_admin(&env, &admin)?;
+
+        let proposal: ParamProposal = env
+            .storage()
+            .instance()
+            .get(&(GOV_PROP, proposal_id))
+            .ok_or(Error::ProposalNotFound)?;
+
+        if proposal.executed {
+            return Err(Error::ProposalNotFound);
+        }
+
+        env.storage().instance().remove(&(GOV_PROP, proposal_id));
+        env.events().publish((GOV_CANCEL_EVENT, admin), proposal_id);
         env.storage()
             .instance()
             .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
@@ -1968,7 +2461,7 @@ impl RewardsContract {
             .get(&CO_ADMINS)
             .unwrap_or(Vec::new(&env));
         if required > co_admins.len() {
-            return Err(Error::InvalidThreshold);
+            return Err(Error::SimpleMultisigInvalidThreshold);
         }
         env.storage().instance().set(&MULTISIG_THRESHOLD, &required);
         env.storage()
@@ -1977,12 +2470,154 @@ impl RewardsContract {
         Ok(())
     }
 
+    /// Return the current state of a governance proposal.
+    pub fn get_param_proposal(env: Env, proposal_id: u64) -> Option<ParamProposal> {
+        env.storage().instance().get(&(GOV_PROP, proposal_id))
+    }
+
     /// Returns the configured M-of-N multisig threshold (0 = disabled).
     pub fn multisig_threshold(env: Env) -> u32 {
         env.storage()
             .instance()
             .get(&MULTISIG_THRESHOLD)
             .unwrap_or(0)
+    }
+
+    // ── Timelocked clawback (issue #729) ─────────────────────────────────────
+
+    /// Propose a clawback of `amount` unclaimed points from `target`.
+    /// Returns the proposal id. Admin-only; the clawback cannot be executed
+    /// until `CLAWBACK_TIMELOCK_LEDGERS` have elapsed so the target has time
+    /// to dispute. The guardian (admin) can cancel within that window.
+    pub fn propose_clawback(
+        env: Env,
+        caller: Address,
+        target: Address,
+        amount: u64,
+    ) -> Result<u32, Error> {
+        require_admin(&env, &caller)?;
+        if amount == 0 {
+            return Err(Error::ZeroAmount);
+        }
+        let balance: u64 = env
+            .storage()
+            .instance()
+            .get(&(BALANCE, target.clone()))
+            .unwrap_or(0);
+        if amount > balance {
+            return Err(Error::ClawbackOverspend);
+        }
+
+        let id: u32 = env.storage().instance().get(&CLAWBACK_NONCE).unwrap_or(0);
+        let next_id = id + 1;
+        env.storage().instance().set(&CLAWBACK_NONCE, &next_id);
+
+        let proposal = ClawbackProposal {
+            target: target.clone(),
+            amount,
+            proposed_at: env.ledger().sequence(),
+            cancelled: false,
+            executed: false,
+        };
+        let key = (CLAWBACK_PROPOSAL, id);
+        env.storage().persistent().set(&key, &proposal);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+
+        env.events()
+            .publish((CLAWBACK_PROPOSE_EVENT, id), (target, amount));
+        Ok(id)
+    }
+
+    /// Cancel a pending clawback proposal. Only the admin (guardian) may cancel.
+    /// Cancelled proposals can never be executed.
+    pub fn cancel_clawback(env: Env, caller: Address, proposal_id: u32) -> Result<(), Error> {
+        caller.require_auth();
+        let stored_admin: Address = env.storage().instance().get(&ADMIN).unwrap();
+        if caller != stored_admin {
+            return Err(Error::ClawbackGuardianOnly);
+        }
+
+        let key = (CLAWBACK_PROPOSAL, proposal_id);
+        let mut proposal: ClawbackProposal = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(Error::ClawbackNotFound)?;
+
+        if proposal.cancelled || proposal.executed {
+            return Err(Error::ClawbackNotFound);
+        }
+
+        proposal.cancelled = true;
+        env.storage().persistent().set(&key, &proposal);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+
+        env.events()
+            .publish((CLAWBACK_CANCEL_EVENT, proposal_id), ());
+        Ok(())
+    }
+
+    /// Execute a clawback proposal after the timelock has elapsed.
+    /// Deducts `amount` from the target's balance and total supply.
+    /// Anyone may call once the timelock is satisfied; replay is blocked by
+    /// the `executed` flag.
+    pub fn execute_clawback(env: Env, caller: Address, proposal_id: u32) -> Result<(), Error> {
+        caller.require_auth();
+
+        let key = (CLAWBACK_PROPOSAL, proposal_id);
+        let mut proposal: ClawbackProposal = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(Error::ClawbackNotFound)?;
+
+        if proposal.cancelled || proposal.executed {
+            return Err(Error::ClawbackNotFound);
+        }
+
+        let elapsed = env.ledger().sequence().saturating_sub(proposal.proposed_at);
+        if elapsed < CLAWBACK_TIMELOCK_LEDGERS {
+            return Err(Error::ClawbackTimelocked);
+        }
+
+        let balance_key = (BALANCE, proposal.target.clone());
+        let balance: u64 = env.storage().instance().get(&balance_key).unwrap_or(0);
+        if proposal.amount > balance {
+            return Err(Error::ClawbackOverspend);
+        }
+
+        let new_balance = balance - proposal.amount;
+        env.storage().instance().set(&balance_key, &new_balance);
+
+        let supply: u64 = env.storage().instance().get(&TOTAL_SUPPLY).unwrap_or(0);
+        env.storage()
+            .instance()
+            .set(&TOTAL_SUPPLY, &supply.saturating_sub(proposal.amount));
+
+        proposal.executed = true;
+        env.storage().persistent().set(&key, &proposal);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+
+        env.events().publish(
+            (CLAWBACK_EXECUTE_EVENT, proposal_id),
+            (proposal.target, proposal.amount),
+        );
+        Ok(())
     }
 }
 

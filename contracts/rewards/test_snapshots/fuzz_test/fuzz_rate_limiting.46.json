@@ -20,10 +20,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "u32": 5
+                  "u32": 4
                 },
                 {
-                  "u32": 11
+                  "u32": 72
                 }
               ]
             }
@@ -160,7 +160,7 @@
                         "symbol": "ratlmax"
                       },
                       "val": {
-                        "u32": 5
+                        "u32": 4
                       }
                     },
                     {
@@ -168,7 +168,7 @@
                         "symbol": "ratlwin"
                       },
                       "val": {
-                        "u32": 11
+                        "u32": 72
                       }
                     },
                     {
@@ -177,6 +177,14 @@
                       },
                       "val": {
                         "u32": 1
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tsupply"
+                      },
+                      "val": {
+                        "u64": "200"
                       }
                     },
                     {

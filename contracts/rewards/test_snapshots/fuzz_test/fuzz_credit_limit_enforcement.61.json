@@ -20,7 +20,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "u64": "243"
+                  "u64": "744"
                 }
               ]
             }
@@ -45,7 +45,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "u64": "52"
+                  "u64": "86"
                 }
               ]
             }
@@ -116,7 +116,7 @@
                         "symbol": "mxcredit"
                       },
                       "val": {
-                        "u64": "243"
+                        "u64": "744"
                       }
                     },
                     {
@@ -137,6 +137,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "tsupply"
+                      },
+                      "val": {
+                        "u64": "86"
+                      }
+                    },
+                    {
+                      "key": {
                         "vec": [
                           {
                             "symbol": "balance"
@@ -147,7 +155,7 @@
                         ]
                       },
                       "val": {
-                        "u64": "52"
+                        "u64": "86"
                       }
                     }
                   ]
@@ -232,7 +240,7 @@
               }
             ],
             "data": {
-              "u64": "52"
+              "u64": "86"
             }
           }
         }

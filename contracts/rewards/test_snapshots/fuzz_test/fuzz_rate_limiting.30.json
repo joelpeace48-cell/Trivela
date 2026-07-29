@@ -20,10 +20,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "u32": 8
+                  "u32": 7
                 },
                 {
-                  "u32": 39
+                  "u32": 9
                 }
               ]
             }
@@ -207,31 +207,12 @@
         }
       ]
     ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "credit",
-              "args": [
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                },
-                {
-                  "u64": "100"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
     [],
     [],
     [],
@@ -315,7 +296,7 @@
                         "symbol": "ratlmax"
                       },
                       "val": {
-                        "u32": 8
+                        "u32": 7
                       }
                     },
                     {
@@ -323,7 +304,7 @@
                         "symbol": "ratlwin"
                       },
                       "val": {
-                        "u32": 39
+                        "u32": 9
                       }
                     },
                     {
@@ -332,6 +313,14 @@
                       },
                       "val": {
                         "u32": 1
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tsupply"
+                      },
+                      "val": {
+                        "u64": "700"
                       }
                     },
                     {
@@ -346,7 +335,7 @@
                         ]
                       },
                       "val": {
-                        "u64": "800"
+                        "u64": "700"
                       }
                     },
                     {
@@ -364,7 +353,7 @@
                         ]
                       },
                       "val": {
-                        "u32": 8
+                        "u32": 7
                       }
                     }
                   ]
@@ -486,26 +475,6 @@
               "key": {
                 "ledger_key_nonce": {
                   "nonce": "5541220902715666415"
-                }
-              },
-              "durability": "temporary",
-              "val": "void"
-            }
-          },
-          "ext": "v0"
-        },
-        "live_until": 6311999
-      },
-      {
-        "entry": {
-          "last_modified_ledger_seq": 0,
-          "data": {
-            "contract_data": {
-              "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4",
-              "key": {
-                "ledger_key_nonce": {
-                  "nonce": "5806905060045992000"
                 }
               },
               "durability": "temporary",

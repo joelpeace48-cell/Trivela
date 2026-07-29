@@ -23,7 +23,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "u64": "11219676257214915785"
+                  "u64": "9900668644835185180"
                 }
               ]
             }
@@ -116,6 +116,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "tsupply"
+                      },
+                      "val": {
+                        "u64": "9900668644835185180"
+                      }
+                    },
+                    {
+                      "key": {
                         "vec": [
                           {
                             "symbol": "balance"
@@ -126,7 +134,7 @@
                         ]
                       },
                       "val": {
-                        "u64": "11219676257214915785"
+                        "u64": "9900668644835185180"
                       }
                     }
                   ]

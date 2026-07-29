@@ -20,7 +20,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "u64": "443"
+                  "u64": "156"
                 }
               ]
             }
@@ -92,7 +92,7 @@
                         "symbol": "mxcredit"
                       },
                       "val": {
-                        "u64": "443"
+                        "u64": "156"
                       }
                     },
                     {

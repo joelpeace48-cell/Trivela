@@ -23,7 +23,7 @@ import { createSqliteUsageRepository } from '../dal/sqliteUsageRepository.js';
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 async function startTestServer(options = {}) {
-  const app = await createApp(options);
+  const app = await createApp({ disableJobs: true, ...options });
   const server = app.listen(0);
   await once(server, 'listening');
   const { port } = /** @type {any} */ (server.address());

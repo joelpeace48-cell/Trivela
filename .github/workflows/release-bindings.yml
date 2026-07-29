@@ -30,7 +30,9 @@ jobs:
       - name: Set up Rust (stable + wasm32 target)
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          # Soroban dropped support for wasm32-unknown-unknown on Rust 1.82+;
+          # wasm32v1-none is the supported target (see contracts-ci.yml).
+          targets: wasm32v1-none
 
       - name: Cache cargo registry and target
         uses: actions/cache@v4
@@ -45,7 +47,7 @@ jobs:
 
       - name: Build Soroban WASM artifacts
         run: |
-          cargo build --target wasm32-unknown-unknown --release \
+          cargo build --target wasm32v1-none --release \
             -p trivela-rewards-contract \
             -p trivela-campaign-contract
 
@@ -70,8 +72,8 @@ jobs:
       - name: Compute WASM SHA-256 hashes
         id: wasm_hashes
         run: |
-          REWARDS_HASH=$(sha256sum target/wasm32-unknown-unknown/release/trivela_rewards_contract.wasm | awk '{print $1}')
-          CAMPAIGN_HASH=$(sha256sum target/wasm32-unknown-unknown/release/trivela_campaign_contract.wasm | awk '{print $1}')
+          REWARDS_HASH=$(sha256sum target/wasm32v1-none/release/trivela_rewards_contract.wasm | awk '{print $1}')
+          CAMPAIGN_HASH=$(sha256sum target/wasm32v1-none/release/trivela_campaign_contract.wasm | awk '{print $1}')
           echo "rewards_hash=${REWARDS_HASH}" >> $GITHUB_OUTPUT
           echo "campaign_hash=${CAMPAIGN_HASH}" >> $GITHUB_OUTPUT
 

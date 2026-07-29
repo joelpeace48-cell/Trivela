@@ -16,10 +16,12 @@ const API_KEY_B = 'test-api-key-editor';
 
 async function startTestServer(options = {}) {
   const app = await createApp({
+    dbPath: ':memory:',
     skipEnvValidation: true,
     masterKey: MASTER_KEY,
     apiKeys: `${API_KEY_A},${API_KEY_B}`,
     disableRedis: true,
+    disableJobs: true,
     ...options,
   });
   const server = app.listen(0);

@@ -20,10 +20,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "u32": 3
+                  "u32": 1
                 },
                 {
-                  "u32": 66
+                  "u32": 53
                 }
               ]
             }
@@ -56,7 +56,10 @@
           "sub_invocations": []
         }
       ]
-    ]
+    ],
+    [],
+    [],
+    []
   ],
   "ledger": {
     "protocol_version": 25,
@@ -135,7 +138,7 @@
                         "symbol": "ratlmax"
                       },
                       "val": {
-                        "u32": 3
+                        "u32": 1
                       }
                     },
                     {
@@ -143,7 +146,7 @@
                         "symbol": "ratlwin"
                       },
                       "val": {
-                        "u32": 66
+                        "u32": 53
                       }
                     },
                     {
@@ -152,6 +155,14 @@
                       },
                       "val": {
                         "u32": 1
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tsupply"
+                      },
+                      "val": {
+                        "u64": "100"
                       }
                     },
                     {
@@ -252,29 +263,5 @@
       }
     ]
   },
-  "events": [
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-        "type_": "contract",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "credit"
-              },
-              {
-                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-              }
-            ],
-            "data": {
-              "u64": "100"
-            }
-          }
-        }
-      },
-      "failed_call": false
-    }
-  ]
+  "events": []
 }

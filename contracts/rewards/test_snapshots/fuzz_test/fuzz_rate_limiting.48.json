@@ -20,10 +20,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "u32": 1
+                  "u32": 5
                 },
                 {
-                  "u32": 55
+                  "u32": 66
                 }
               ]
             }
@@ -56,9 +56,7 @@
           "sub_invocations": []
         }
       ]
-    ],
-    [],
-    []
+    ]
   ],
   "ledger": {
     "protocol_version": 25,
@@ -137,7 +135,7 @@
                         "symbol": "ratlmax"
                       },
                       "val": {
-                        "u32": 1
+                        "u32": 5
                       }
                     },
                     {
@@ -145,7 +143,7 @@
                         "symbol": "ratlwin"
                       },
                       "val": {
-                        "u32": 55
+                        "u32": 66
                       }
                     },
                     {
@@ -154,6 +152,14 @@
                       },
                       "val": {
                         "u32": 1
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "tsupply"
+                      },
+                      "val": {
+                        "u64": "100"
                       }
                     },
                     {
@@ -254,5 +260,29 @@
       }
     ]
   },
-  "events": []
+  "events": [
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+        "type_": "contract",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "credit"
+              },
+              {
+                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+              }
+            ],
+            "data": {
+              "u64": "100"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    }
+  ]
 }

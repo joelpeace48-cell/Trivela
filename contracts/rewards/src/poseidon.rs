@@ -46,8 +46,7 @@ pub fn hash_pair(
     left: &BytesN<32>,
     right: &BytesN<32>,
 ) -> Result<BytesN<32>, PoseidonHashError> {
-    let mut hasher =
-        Poseidon::<Fr>::new_circom(2).map_err(|_| PoseidonHashError::HashFailed)?;
+    let mut hasher = Poseidon::<Fr>::new_circom(2).map_err(|_| PoseidonHashError::HashFailed)?;
     let out = hasher
         .hash_bytes_be(&[&left.to_array(), &right.to_array()])
         .map_err(|_| PoseidonHashError::HashFailed)?;
@@ -59,8 +58,7 @@ pub fn hash_pair(
 /// (e.g. Poseidon(address, amount) computed at tree-build time) -- this
 /// function does not construct that preimage, only hashes it into a leaf.
 pub fn hash_leaf(env: &Env, leaf_preimage: &BytesN<32>) -> Result<BytesN<32>, PoseidonHashError> {
-    let mut hasher =
-        Poseidon::<Fr>::new_circom(2).map_err(|_| PoseidonHashError::HashFailed)?;
+    let mut hasher = Poseidon::<Fr>::new_circom(2).map_err(|_| PoseidonHashError::HashFailed)?;
     let out = hasher
         .hash_bytes_be(&[&LEAF_DOMAIN_TAG, &leaf_preimage.to_array()])
         .map_err(|_| PoseidonHashError::HashFailed)?;
