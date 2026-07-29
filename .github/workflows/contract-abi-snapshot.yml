@@ -8,13 +8,22 @@ name: Contract ABI Snapshot
 on:
   pull_request:
     paths:
+<<<<<<< HEAD
       - 'contracts/**'
       - '.github/workflows/contract-abi-snapshot.yml'
+=======
+      - "contracts/**"
+      - ".github/workflows/contract-abi-snapshot.yml"
+>>>>>>> 15605f00 (fix: referral loop detection, clawback timelock, outbox relay, ABI snapshots (#729 #743 #746 #784 #790 #799 #803 #805))
   push:
     branches:
       - main
     paths:
+<<<<<<< HEAD
       - 'contracts/**'
+=======
+      - "contracts/**"
+>>>>>>> 15605f00 (fix: referral loop detection, clawback timelock, outbox relay, ABI snapshots (#729 #743 #746 #784 #790 #799 #803 #805))
 
 jobs:
   abi-snapshot:
