@@ -1,6 +1,6 @@
 // @ts-check
 import { z } from 'zod';
-export const DEFAULT_CATEGORIES = ['DeFi', 'NFT', 'Community', 'Airdrop'];
+import { DEFAULT_CATEGORIES } from './dal/sqliteCampaignRepository.js';
 import { VALID_RATE_TIERS } from './config/rateTiers.js';
 
 const isoDateOrNull = z
@@ -223,7 +223,11 @@ export const pledgeSchema = z.object({
     .number({ required_error: 'amount is required' })
     .finite()
     .positive('amount must be a positive number'),
-  userAddress: z.string().trim().min(1, 'userAddress is required').optional(),
+  userAddress: z
+    .string()
+    .trim()
+    .min(1, 'userAddress is required')
+    .optional(),
 });
 
 /** Schema for claiming a reward / payout. */
