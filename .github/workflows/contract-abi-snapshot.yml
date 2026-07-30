@@ -74,7 +74,15 @@ jobs:
               --quiet
           done
 
+      # Disabled: `stellar contract inspect --output json` isn't a valid flag
+      # for the CLI version this workflow installs (valid values are
+      # xdr-base64, xdr-base64-array, docs — no json). The committed
+      # contracts/snapshots/*.json files' own header comments claim they
+      # were generated with --output json, so this has never actually run
+      # successfully. Needs a real decision on what format to diff against
+      # before re-enabling.
       - name: Export ABI specs
+        if: false
         run: |
           mkdir -p /tmp/abi-current
           for contract in campaign rewards; do
@@ -84,6 +92,7 @@ jobs:
           done
 
       - name: Diff against committed snapshots
+        if: false
         id: diff
         run: |
           changed=0
